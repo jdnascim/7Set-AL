@@ -1,0 +1,15 @@
+{
+    "model": "KarateGraph4Att",
+    "actl": "degree",
+    "hidden_dim": 4096,
+    "lr": 1e-5,
+    "epochs": 40,
+    "weight_decay": 1e-3,
+    "shuffle_train_val": true,
+    "train_size": 18,
+    "val_size": 12,
+    "test_size": -1,
+    "knn_total": 16,
+    "knn_train": 10,
+    "select_best": "val"
+}
