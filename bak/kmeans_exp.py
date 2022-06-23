@@ -12,7 +12,7 @@ TRAIN_SIZE = 30
 SEED = 13
 LBL_QTDE = [30]
 
-img_emb,img_anno, _, _ = get_emb_vec()
+out = get_emb_vec("clipsum")
 
 bacc_list = np.zeros([QTDE_EXP], dtype=np.float32)
 f1_list = np.zeros([QTDE_EXP], dtype=np.float32)

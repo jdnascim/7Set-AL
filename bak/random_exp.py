@@ -13,10 +13,10 @@ TRAIN_SIZE = 30
 SEED = 13
 LBL_QTDE = [30]
 
-out = get_emb_vec()
+out = get_emb_vec("clipsum")
 
-img_emb = out['img_emb']
-img_anno = out['img_anno']
+emb = out['emb_mt']
+anno = out['anno']
 
 exp = allib.random_sampling(QTDE_EXP, LBL_QTDE, SEED)
 

@@ -24,7 +24,8 @@ def train_data(model, data, args):
     model.train()
     optimizer.zero_grad()
 
-    out = model(data)[data.train_mask]
+    out = model(data)
+    out = out[data.train_mask]
     res = data.y[data.train_mask].long()
 
     loss = F.nll_loss(out, res)
@@ -121,46 +122,61 @@ def eval_loader(model, device, loader):
     return bacc, f1
 
 
-def load_image_data(knn=16, hold_test=False):
-    data = get_emb_vec()
+def load_image_data(emb, graph, n_neighbours=16, hold_test=False):
+    data = get_emb_vec(emb)
 
     out = dict()
 
     G = nx.Graph()
 
     if hold_test is False:
-        img_emb = data["img_emb"]
-        img_anno = data["img_anno"]
+        emb = data["emb_mt"]
+        anno = data["anno"]
         train_mask = data["train_mask"]
         val_mask = data["eval_mask"]
         test_mask = data["test_mask"]
+        tweet_id = data['tweet_id']
     else:
-        img_emb = data['img_emb'][data['train_mask'] | data['eval_mask']]
-        img_anno = data['img_anno'][data['train_mask'] | data['eval_mask']]
-        train_mask = data["train_mask"][data['train_mask'] | data['eval_mask']]
-        val_mask = data["eval_mask"][data['train_mask'] | data['eval_mask']]
+        train_val_mask = data['train_mask'] | data['eval_mask']
 
-    n_from = [(i, {'y':img_anno[i], 'x': img_emb[i]}) for i in range(len(img_anno))]
+        emb = data['emb_mt'][train_val_mask]
+        anno = data['anno'][train_val_mask]
+        train_mask = data["train_mask"][train_val_mask]
+        val_mask = data["eval_mask"][train_val_mask]
+        tweet_id = data['tweet_id'][train_val_mask]
+
+    n_from = [(i, {'y':anno[i], 'x': emb[i]}) for i in range(emb.shape[0])]
     G.add_nodes_from(n_from)
     
-    simm = cosine_similarity(img_emb)
-    simm[np.arange(simm.shape[0]),np.arange(simm.shape[0])] = 0
-    
-    for i, vec in enumerate(simm):
-        partit = np.argpartition(vec, -1*knn)
-        for j in range(knn):
-            G.add_edge(i, partit[-1 * j])
+    if graph == 'knn':
+        simm = cosine_similarity(emb)
+        simm[np.arange(simm.shape[0]),np.arange(simm.shape[0])] = 0
+        
+        for i, vec in enumerate(simm):
+            partit = np.argpartition(vec, -1*n_neighbours)
+            for j in range(n_neighbours):
+                G.add_edge(i, partit[-1 * j])
+    elif graph == 'th85':
+        simm = cosine_similarity(emb)
+        simm[np.arange(simm.shape[0]),np.arange(simm.shape[0])] = 0
+
+        simm[simm < 0.85] = 0
+
+        for i in range(simm.shape[0]):
+            for j in range(i+1, simm.shape[1]): 
+                if simm[i][j] > 0:
+                    G.add_edge(i, j)
     
     pyg_graph = torch_geometric.utils.from_networkx(G)
-    
 
+    pyg_graph.tweet_id = tweet_id
+    
     if hold_test is False:
         pyg_graph.train_mask = train_mask
         pyg_graph.val_mask = val_mask
         pyg_graph.test_mask = test_mask
 
     return pyg_graph
-
 
 
 def dl_image_data(knn=16, batch_size=16):
@@ -170,9 +186,8 @@ def dl_image_data(knn=16, batch_size=16):
     return loader
 
 
-def run_base(model, pyg_graph, args, pyg_graph_test=None, display=False):
-    if pyg_graph_test is None:
-        pyg_graph_test = pyg_graph
+def run_base(model, pyg_graph, args):
+    display = args['display']
 
     select_best = args['select_best']
     shuffle_train_val = args['shuffle_train_val']
@@ -184,10 +199,6 @@ def run_base(model, pyg_graph, args, pyg_graph_test=None, display=False):
     
     train_val_mask = pyg_graph.train_mask | pyg_graph.val_mask
     y = pyg_graph.y
-    pos_weight = (y[train_val_mask] == 1).sum(dim=0) / (y[train_val_mask] == 0).sum(dim=0) 
-    
-    optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'], weight_decay=args['weight_decay'])
-    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     
     best_model = None
     best_valid_bacc = 0
@@ -230,6 +241,12 @@ def run_base(model, pyg_graph, args, pyg_graph_test=None, display=False):
                 f'Valid: {100 * valid_bacc:.2f}% '
                 f'Test: {100 * test_bacc:.2f}%')
     
+    return best_model, test_bacc
+
+
+def validate_best_model(best_model, pyg_graph_test, args):
+    display = args['display']
+
     train_bacc, valid_bacc, test_bacc = eval_data(best_model, pyg_graph_test)
 
     if display is True:
@@ -238,6 +255,7 @@ def run_base(model, pyg_graph, args, pyg_graph_test=None, display=False):
         print(f'Train: {100 * train_bacc:.2f}%, '
             f'Valid: {100 * valid_bacc:.2f}% '
             f'Test: {100 * test_bacc:.2f}%')
+
+    return test_bacc
     
-    return best_model, test_bacc
     

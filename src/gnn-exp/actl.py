@@ -1,4 +1,7 @@
+BASE = "/home/jnascimento/exps/2022-7set-al/7Set-AL/"
+
 import numpy as np
+import pandas as pd
 from sklearn.cluster import KMeans
 from torch_geometric.utils import degree
 from sklearn.model_selection import train_test_split
@@ -80,6 +83,9 @@ def select_random(pyg_graph, args):
     train = args['train_size']
     val = args['val_size']
     test = args['test_size']
+    s = args['random_state']
+
+    np.random.seed(s)
 
     n = pyg_graph.num_nodes
 
@@ -108,8 +114,58 @@ def select_random(pyg_graph, args):
     return pyg_graph
 
 
+def select_clustering(pyg_graph, args, filename):
+    df_repr = pd.read_csv(BASE + "clusterings/" + filename)
+
+    train_val_ix = set()
+
+    items_repr = set(df_repr["tweet_id"])
+
+    n = pyg_graph.num_nodes
+
+    train_val_mask = np.zeros(n, np.bool_)
+
+    for i in range(n):
+        if pyg_graph.tweet_id[i] in items_repr:
+            train_val_ix.add(i)
+
+    train_val_ix = np.array(list(train_val_ix))
+
+    train_ix = np.random.choice(train_val_ix, args['train_size'],
+                         replace=False)
+
+    pyg_graph.train_mask = np.zeros(n, np.bool_)
+    pyg_graph.train_mask[train_ix] = True
+
+    pyg_graph.val_mask = np.zeros(n, np.bool_)
+    pyg_graph.val_mask[train_val_ix] = True
+    pyg_graph.val_mask[train_ix] = False
+
+    pyg_graph.test_mask = np.ones(n, np.bool_)
+    pyg_graph.test_mask[train_val_ix] = False
+
+    return pyg_graph
+
+
 def get_train_val(pyg_graph, args):
     actl = args["actl"]
+
+    clustering_ref = {
+        "leiden-bw":"leiden/LeidenBetweennessSum.csv",
+        "leiden-close":"leiden/LeidenClosenessSum.csv",
+        "leiden-deg":"leiden/LeidenDegreeSum.csv",
+        "leiden-eigen":"leiden/LeidenEigenSum.csv",
+        "leiden-mci":"leiden/LeidenMCISum.csv",
+        "leiden-pgrk":"leiden/LeidenPageRankSum.csv",
+        "leiden-rdn":"leiden/LeidenRandomSum.csv",
+        "agg-bw":"agglomerative/AggBetweennessSum.csv",
+        "agg-close":"agglomerative/AggClosenessSum.csv",
+        "agg-deg":"agglomerative/AggDegreeSum.csv",
+        "agg-eigen":"agglomerative/AggEigenSum.csv",
+        "agg-mci":"agglomerative/AggMCISum.csv",
+        "agg-pgrk":"agglomerative/AggPageRankSum.csv",
+        "agg-rdn":"agglomerative/AggRandomSum.csv"
+    }
 
     if actl == "random":
         return select_random(pyg_graph, args)
@@ -117,3 +173,5 @@ def get_train_val(pyg_graph, args):
         return select_high_degree(pyg_graph, args)
     elif actl == "kmeans":
         return select_kmeans_centers(pyg_graph, args)
+    elif actl in clustering_ref.keys():
+        return select_clustering(pyg_graph, args, clustering_ref[actl])
