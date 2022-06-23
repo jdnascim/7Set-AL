@@ -115,23 +115,41 @@ def select_random(pyg_graph, args):
 
 
 def select_clustering(pyg_graph, args, filename):
+    np.random.seed(args['random_seed'])
+
     df_repr = pd.read_csv(BASE + "clusterings/" + filename)
 
-    train_val_ix = set()
+    train_size = args['train_size']
+    val_size = args['val_size']
 
-    items_repr = set(df_repr["tweet_id"])
+    n_clusters = df_repr.cluster_id.unique().shape[0]
+
+    if (train_size + val_size) % n_clusters != 0:
+        raise("train + val not multiple of {}".format(n_clusters))
+    
+    train_val_set = set()
+
+    items_per_cluster = (train_size + val_size) // n_clusters
+
+    for i in range(n_clusters):
+        repr_cl = set(df_repr[df_repr.cluster_id == i][:items_per_cluster].tweet_id)
+        train_val_set.update(repr_cl)
+    
+    print(train_val_set)
 
     n = pyg_graph.num_nodes
 
     train_val_mask = np.zeros(n, np.bool_)
 
-    for i in range(n):
-        if pyg_graph.tweet_id[i] in items_repr:
-            train_val_ix.add(i)
+    train_val_ix = set()
 
+    for i in range(n):
+        if pyg_graph.tweet_id[i] in train_val_set:
+            train_val_ix.add(i)
+    
     train_val_ix = np.array(list(train_val_ix))
 
-    train_ix = np.random.choice(train_val_ix, args['train_size'],
+    train_ix = np.random.choice(train_val_ix, train_size,
                          replace=False)
 
     pyg_graph.train_mask = np.zeros(n, np.bool_)
@@ -149,22 +167,27 @@ def select_clustering(pyg_graph, args, filename):
 
 def get_train_val(pyg_graph, args):
     actl = args["actl"]
+    
+    if args["emb"] == "clipcat":
+        suffix = "Cat"
+    elif args['emb'] == "clipsum":
+        suffix = "Sum"
 
     clustering_ref = {
-        "leiden-bw":"leiden/LeidenBetweennessSum.csv",
-        "leiden-close":"leiden/LeidenClosenessSum.csv",
-        "leiden-deg":"leiden/LeidenDegreeSum.csv",
-        "leiden-eigen":"leiden/LeidenEigenSum.csv",
-        "leiden-mci":"leiden/LeidenMCISum.csv",
-        "leiden-pgrk":"leiden/LeidenPageRankSum.csv",
-        "leiden-rdn":"leiden/LeidenRandomSum.csv",
-        "agg-bw":"agglomerative/AggBetweennessSum.csv",
-        "agg-close":"agglomerative/AggClosenessSum.csv",
-        "agg-deg":"agglomerative/AggDegreeSum.csv",
-        "agg-eigen":"agglomerative/AggEigenSum.csv",
-        "agg-mci":"agglomerative/AggMCISum.csv",
-        "agg-pgrk":"agglomerative/AggPageRankSum.csv",
-        "agg-rdn":"agglomerative/AggRandomSum.csv"
+        "leiden-bw":"leiden/LeidenBetweenness{}.csv".format(suffix),
+        "leiden-close":"leiden/LeidenCloseness{}.csv".format(suffix),
+        "leiden-deg":"leiden/LeidenDegree{}.csv".format(suffix),
+        "leiden-eigen":"leiden/LeidenEigen{}.csv".format(suffix),
+        "leiden-mci":"leiden/LeidenMCI{}.csv".format(suffix),
+        "leiden-pgrk":"leiden/LeidenPageRank{}.csv".format(suffix),
+        "leiden-rdn":"leiden/LeidenRandom{}.csv".format(suffix),
+        "agg-bw":"agglomerative/AggBetweenness{}.csv".format(suffix),
+        "agg-close":"agglomerative/AggCloseness{}.csv".format(suffix),
+        "agg-deg":"agglomerative/AggDegree{}.csv".format(suffix),
+        "agg-eigen":"agglomerative/AggEigen{}.csv".format(suffix),
+        "agg-mci":"agglomerative/AggMCI{}.csv".format(suffix),
+        "agg-pgrk":"agglomerative/AggPageRank{}.csv".format(suffix),
+        "agg-rdn":"agglomerative/AggRandom{}.csv".format(suffix)
     }
 
     if actl == "random":
