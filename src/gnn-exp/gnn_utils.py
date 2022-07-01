@@ -41,16 +41,16 @@ def eval_data(model, data):
 
     mask_train = data['train_mask']
     pred_train = logits[mask_train].max(1)[1]
-    bacc_train = get_normalized_acc(pred_train, data.y[mask_train])
+    bacc_train = get_normalized_acc(data.y[mask_train], pred_train)
 
     mask_val = data['val_mask']
     pred_val = logits[mask_val].max(1)[1]
     acc_val = pred_val.eq(data.y[mask_val]).sum().item() / mask_val.sum().item()
-    bacc_val = get_normalized_acc(pred_val, data.y[mask_val])
+    bacc_val = get_normalized_acc(data.y[mask_val], pred_val)
 
     mask_test = data['test_mask']
     pred_test = logits[mask_test].max(1)[1]
-    bacc_test = get_normalized_acc(pred_test, data.y[mask_test])
+    bacc_test = get_normalized_acc(data.y[mask_test], pred_test)
 
     return bacc_train, bacc_val, bacc_test
 
@@ -156,17 +156,20 @@ def load_image_data(emb, graph, n_neighbours=16, hold_test=False):
             partit = np.argpartition(vec, -1*n_neighbours)
             for j in range(n_neighbours):
                 G.add_edge(i, partit[-1 * j])
-    elif graph == 'th85':
-        simm = cosine_similarity(emb)
-        simm[np.arange(simm.shape[0]),np.arange(simm.shape[0])] = 0
+    elif graph == 'leiden':
+        tweet_id_ix = dict()
+        
+        for ix, id_t in enumerate(tweet_id):
+            tweet_id_ix[id_t] = ix
 
-        simm[simm < 0.85] = 0
+        if hold_test is False:
+            G_leiden = nx.read_gpickle(BASE + "clusterings/graphLeidenFullSum.gpickle")
+        else:
+            G_leiden = nx.read_gpickle(BASE + "clusterings/graphLeidenTrainSum.gpickle")
 
-        for i in range(simm.shape[0]):
-            for j in range(i+1, simm.shape[1]): 
-                if simm[i][j] > 0:
-                    G.add_edge(i, j)
-    
+        for (u, v) in G_leiden.edges():
+            G.add_edge(tweet_id_ix[u], tweet_id_ix[v])
+
     pyg_graph = torch_geometric.utils.from_networkx(G)
 
     pyg_graph.tweet_id = tweet_id
@@ -175,6 +178,10 @@ def load_image_data(emb, graph, n_neighbours=16, hold_test=False):
         pyg_graph.train_mask = train_mask
         pyg_graph.val_mask = val_mask
         pyg_graph.test_mask = test_mask
+    else:
+        pyg_graph.train_mask = train_mask
+        pyg_graph.val_mask = val_mask
+        pyg_graph.test_mask = np.ones_like(train_mask, np.bool_)
 
     return pyg_graph
 
@@ -227,10 +234,10 @@ def run_base(model, pyg_graph, args):
             print('Evaluating...')
         
         train_bacc, valid_bacc, test_bacc = eval_data(model, pyg_graph)
-        if valid_bacc > best_valid_bacc and select_best == 'val':
+        if valid_bacc >= best_valid_bacc and select_best == 'val':
             best_valid_bacc = valid_bacc
             best_model = copy.deepcopy(model)
-        elif test_bacc > best_test_bacc and select_best == 'test':
+        elif test_bacc >= best_test_bacc and select_best == 'test':
             best_test_bacc = test_bacc
             best_model = copy.deepcopy(model)
 

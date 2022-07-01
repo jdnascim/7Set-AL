@@ -1,4 +1,4 @@
-from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import f1_score, balanced_accuracy_score
 import numpy as np
 import pandas as pd
 import torch
@@ -6,20 +6,20 @@ import torch
 BASE = "/home/jnascimento/exps/2022-7set-al/7Set-AL/"
 
 def get_normalized_acc(y_true, y_pred):
-    y_pred = y_pred.reshape([-1,1])
-    norm_acc = []
-
     if torch.is_tensor(y_true):
         y_true = y_true.cpu()
     if torch.is_tensor(y_pred):
         y_pred = y_pred.cpu()
 
-    for yt in np.unique(y_true):
-        norm_acc.append(accuracy_score(y_true[y_true == yt], y_pred[y_true == yt]))
-    return np.mean(norm_acc)
+    return balanced_accuracy_score(y_true, y_pred)
 
 
 def get_f1(y_true, y_pred):
+    if torch.is_tensor(y_true):
+        y_true = y_true.cpu()
+    if torch.is_tensor(y_pred):
+        y_pred = y_pred.cpu()
+
     return f1_score(y_true, y_pred, average='weighted')
 
 

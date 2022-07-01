@@ -1,3 +1,7 @@
+"""
+LGC experiment
+"""
+
 BASE = "/home/jnascimento/exps/2022-7set-al/7Set-AL/"
 
 import sys

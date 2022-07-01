@@ -2,9 +2,9 @@
     "model": "NGCN",
     "emb": "clipsum",
     "graph": "knn",
-    "actl": "random",
+    "actl": "-",
     "lr": 1e-5,
-    "epochs": 100,
+    "epochs": 1000,
     "weight_decay": 1e-3,
     "shuffle_train_val": false,
     "train_size": 18,
@@ -13,7 +13,7 @@
     "knn_total": 16,
     "knn_train": 10,
     "select_best": "val",
-    "cuda_device": 3,
-    "display": false,
-    "results_file": "../../../results/gnn_clip.csv"
+    "cuda_device": 2,
+    "display": true,
+    "results_file": "/home/jnascimento/exps/2022-7set-al/7Set-AL/results/results_parallel/gnn_clip{}.csv"
 }
