@@ -1,0 +1,4 @@
+model,emb,actl,hidden_dim,lr,epochs,weight_decay,shuffle_train_val,train_size,val_size,test_size,knn_total,knn_train,select_best,random_state,bacc_mean,bacc_std
+KarateGraph4Att,clipsum,-,4096,1e-05,40,0.001,True,2600,500,-1,16,10,val,-,0.77906793,0.017175788
+KarateGraph,clipsum,-,4096,1e-05,40,0.001,False,2600,500,-1,16,10,val,-,0.77048445,0.040686157
+KarateGraph5Att,clipsum,-,4096,1e-05,40,0.001,False,2600,500,-1,16,10,val,-,0.8055838,0.052748486

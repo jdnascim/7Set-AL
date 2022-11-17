@@ -1,0 +1,19 @@
+{
+    "model": "NGCN",
+    "emb": "clipsum",
+    "graph": "knn",
+    "actl": "-",
+    "lr": 1e-5,
+    "epochs": 1000,
+    "weight_decay": 1e-3,
+    "shuffle_train_val": false,
+    "train_size": 18,
+    "val_size": 12,
+    "test_size": -1,
+    "knn_total": 16,
+    "knn_train": 10,
+    "select_best": "val",
+    "cuda_device": 2,
+    "display": true,
+    "results_file": "/home/jnascimento/exps/2022-7set-al/7Set-AL/results/results_parallel/gnn_clip{}.csv"
+}
