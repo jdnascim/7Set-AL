@@ -1,6 +1,5 @@
 # Event Filtering
 
-Using Active Learning to filter social-media posts related to a specific event
+Filtering social-media posts related to a specific event
 
-
-Tweet data at https://drive.google.com/file/d/1QwcVbtfcLmepQcO55RUdWsqmISR1V5vV/view?usp=sharing 
+Tweet data available at [https://zenodo.org/records/15032725](https://zenodo.org/records/15032725)
